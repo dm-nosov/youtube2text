@@ -1,31 +1,34 @@
 import Anthropic from '@anthropic-ai/sdk';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY, // or directly pass the key
-});
+const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY from the environment
 
 async function main() {
   const response = await anthropic.beta.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-opus-4-8',
     max_tokens: 8000,
+    betas: ['mcp-client-2025-11-20'],
+    mcp_servers: [
+      {
+        type: 'url',
+        name: 'youtube2text',
+        url: 'https://youtube2text.org/mcp',
+        authorization_token: 'your_yt2text_key',
+      },
+    ],
+    tools: [{ type: 'mcp_toolset', mcp_server_name: 'youtube2text' }],
     messages: [
       {
         role: 'user',
         content: 'Extract and summarize the transcript from https://www.youtube.com/watch?v=example',
       },
     ],
-    mcp_servers: [
-      {
-        name: 'youtube2text',
-        type: 'url',
-        url: 'https://api.youtube2text.org/mcp',
-        authorization_token: 'your_yt2text_key',
-      },
-    ],
-    extra_headers: { 'anthropic-beta': 'mcp-client-2025-04-04' },
   });
 
-  console.log(response.content);
+  for (const block of response.content) {
+    if (block.type === 'text') {
+      console.log(block.text);
+    }
+  }
 }
 
 main();

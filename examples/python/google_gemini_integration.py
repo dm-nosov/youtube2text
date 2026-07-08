@@ -1,29 +1,23 @@
-import google.generativeai as genai
 import requests
+from google import genai
 
-genai.configure(api_key="your_gemini_key")
+client = genai.Client()  # reads GEMINI_API_KEY from the environment
 
-def get_youtube_transcription(video_url: str) -> dict:
-    """Fetch YouTube video transcription via API."""
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer your_yt2text_key"
-    }
-    
-    response = requests.post(
-        "https://api.youtube2text.org/mcp",
-        headers=headers,
-        json={"url": video_url}
+
+def get_youtube_transcript(video_url: str) -> dict:
+    """Fetch the transcript of a YouTube video as plain text."""
+    response = requests.get(
+        "https://youtube2text.org/api/transcribe",
+        params={"url": video_url, "maxChars": 50000},
+        headers={"x-api-key": "your_yt2text_key"},
     )
-    
-    return response.json() if response.ok else {"error": str(response.text)}
+    return response.json()
 
-model = genai.GenerativeModel(
-    model_name='gemini-2.5-flash',
-    tools=[get_youtube_transcription]
+
+response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents="Transcribe and summarize: https://www.youtube.com/watch?v=example",
+    config=genai.types.GenerateContentConfig(tools=[get_youtube_transcript]),
 )
-
-chat = model.start_chat(enable_automatic_function_calling=True)
-response = chat.send_message("Transcribe: https://www.youtube.com/watch?v=example")
 
 print(response.text)

@@ -1,34 +1,23 @@
 import OpenAI from "openai";
 
-const openai = new OpenAI();
+const openai = new OpenAI(); // reads OPENAI_API_KEY from the environment
 
 async function main() {
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [{ role: "user", content: "Transcribe and analyze: https://www.youtube.com/watch?v=example" }],
+  const response = await openai.responses.create({
+    model: "gpt-5",
     tools: [
       {
-        type: "function",
-        function: {
-          name: "youtube2text",
-          description: "Get the transcript of a YouTube video.",
-          parameters: {
-            type: "object",
-            properties: {
-              url: {
-                type: "string",
-                description: "The URL of the YouTube video.",
-              },
-            },
-            required: ["url"],
-          },
-        },
+        type: "mcp",
+        server_label: "youtube2text",
+        server_url: "https://youtube2text.org/mcp",
+        headers: { "x-api-key": "your_yt2text_key" },
+        require_approval: "never",
       },
     ],
-    tool_choice: "auto",
+    input: "Transcribe and analyze: https://www.youtube.com/watch?v=example",
   });
 
-  console.log(response.choices[0]);
+  console.log(response.output_text);
 }
 
 main();
