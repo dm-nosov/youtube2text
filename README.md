@@ -1,34 +1,44 @@
 # YouTube2Text - Video Transcription API
 
-A powerful text extraction service that converts YouTube video content into clean, timestampless transcripts for content analysis, research, and processing workflows.
+A text extraction service that converts YouTube video content into clean, timestampless transcripts for content analysis, research, and processing workflows. Available as a REST API and as an MCP server for AI agents.
 
 ## Overview
 
 YouTube2Text transforms YouTube videos into readable text by removing subtitle timing markers and metadata, delivering pure content suitable for:
 
 - Content analysis and insights
-- Text summarization workflows  
+- Text summarization workflows
 - Research and documentation
 - Content generation pipelines
-- Natural language processing tasks
+- AI agent and RAG pipelines
 
 ## Quick Start
 
-Begin with a demo API key from [https://api.youtube2text.org](https://api.youtube2text.org). For consistent access and higher usage limits, upgrade to a subscription plan.
+```bash
+# Get the free shared demo key (no account, 5 videos/month per IP)
+curl -s https://youtube2text.org/api/demo-key
+# -> {"success":true,"apiKey":"yt_..."}
+
+# Fetch a transcript
+curl -s "https://youtube2text.org/api/transcribe?url=https://www.youtube.com/watch?v=VIDEO_ID&maxChars=5000" \
+  -H "x-api-key: yt_YOUR_KEY"
+```
+
+For your own key and higher limits, sign in with Google at [youtube2text.org/app/keys](https://youtube2text.org/app/keys).
 
 ## API Reference
 
-**Base URL**: `https://api.youtube2text.org`  
-**Transcription Endpoint**: `/transcribe`
+**Base URL**: `https://youtube2text.org`
+**Transcription Endpoint**: `/api/transcribe` (GET or POST)
+
+Complete machine-readable reference: [youtube2text.org/api.md](https://youtube2text.org/api.md) (index: [/llms.txt](https://youtube2text.org/llms.txt)). Existing integrations using `https://api.youtube2text.org` continue to work.
 
 ### Request Format
 
-Send POST requests with these parameters:
-
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `url` | string | Yes | Complete YouTube video URL |
-| `maxChars` | number | No | Character limit (default: 150,000) |
+| `url` | string | Yes | Any YouTube URL form (watch, `youtu.be`, Shorts, embed) or a bare 11-character video ID |
+| `maxChars` | number | No | Character limit (default and max: 150,000) |
 
 ### Authentication
 
@@ -36,6 +46,7 @@ Include your API key in the request header:
 ```
 x-api-key: YOUR_API_KEY
 ```
+`Authorization: Bearer YOUR_API_KEY` is also accepted.
 
 ### HTTP Status Codes
 
@@ -55,8 +66,22 @@ x-api-key: YOUR_API_KEY
 - `VIDEO_NOT_FOUND`: YouTube video unavailable
 - `TRANSCRIPT_UNAVAILABLE`: No captions available
 - `INVALID_URL`: Malformed video URL
-- `RATE_LIMIT_EXCEEDED`: Quota or rate limit reached
+- `RATE_LIMIT_EXCEEDED`: Quota or rate limit reached (`retryAfterSeconds` included)
+- `YOUTUBE_ERROR`: Upstream YouTube failure, retry later
 - `INTERNAL_ERROR`: Server-side issue
+
+All error responses include a `docsUrl` field pointing at the API reference.
+
+## MCP Server (AI agents)
+
+The MCP server at `https://youtube2text.org/mcp` (streamable HTTP) exposes a `transcribe_video(url, maxChars?)` tool. OAuth 2.1 is supported, so clients like claude.ai connect without manual key handling; an API key header works for everything else.
+
+- **claude.ai**: Settings → Connectors → Add custom connector → `https://youtube2text.org/mcp` → sign in with Google and click Allow.
+- **Claude Code**: `claude mcp add --transport http youtube2text https://youtube2text.org/mcp`
+- **Claude API**: add `{"type": "url", "url": "https://youtube2text.org/mcp", "name": "youtube2text", "authorization_token": "YOUR_API_KEY"}` to `mcp_servers`.
+- **OpenAI Responses API**: add `{"type": "mcp", "server_label": "youtube2text", "server_url": "https://youtube2text.org/mcp", "headers": {"x-api-key": "YOUR_KEY"}, "require_approval": "never"}` to `tools`.
+
+Integration guides and recipes: [youtube2text.org/blog](https://youtube2text.org/blog).
 
 ## Examples
 
@@ -72,71 +97,8 @@ This directory contains examples of how to use the YouTube2Text API with differe
 
 *   [Anthropic Claude Integration](./examples/javascript/anthropic_claude_integration.js)
 *   [OpenAI Integration](./examples/javascript/openai_integration.js)
-*   [Google Gemini Integration](./examples/javascript/google_gemini_integration.js)
 
 ### TypeScript
 
 *   [Anthropic Claude Integration](./examples/typescript/anthropic_claude_integration.ts)
 *   [OpenAI Integration](./examples/typescript/openai_integration.ts)
-*   [Google Gemini Integration](./examples/typescript/google_gemini_integration.ts)
-
-
-## Automation Integration
-
-### Workflow Automation
-
-The API integrates with popular automation platforms:
-
-- **Zapier**: Connect via MCP integration for triggered workflows
-- **n8n**: Use HTTP request nodes or MCP connectors for process automation
-- **Make (Integromat)**: HTTP modules for video processing pipelines
-
-### Example Workflow Ideas
-
-1. **Content Pipeline**: YouTube → Transcription → Summary → Social Media Posts
-2. **Research Automation**: Video URLs → Transcripts → Analysis → Report Generation  
-3. **Content Monitoring**: Channel Watching → New Videos → Auto-transcription → Alerts
-
-## Response Examples
-
-### Successful Response
-
-```json
-{
-  "result": {
-    "videoId": "dQw4w9WgXcQ",
-    "title": "Rick Astley - Never Gonna Give You Up (Official Video)",
-    "pubDate": "2009-10-25T07:57:33-07:00",
-    "content": "We're no strangers to love You know the rules and so do I...",
-    "contentSize": 1337,
-    "truncated": false
-  }
-}
-```
-
-### Error Response
-
-```json
-{
-  "error": {
-    "code": "RATE_LIMIT_EXCEEDED",
-    "message": "Monthly quota exceeded",
-    "status": 429,
-    "retryAfterSeconds": 3600,
-    "details": "Upgrade plan for higher limits"
-  }
-}
-```
-
-## Best Practices
-
-- Store API keys securely using environment variables
-- Implement proper error handling for all status codes
-- Respect rate limits and implement retry logic with exponential backoff
-- Cache transcripts locally when possible to avoid redundant API calls
-- Monitor usage to stay within quota limits
-- Use appropriate `maxChars` limits for your use case
-
-## Support
-
-For additional examples, troubleshooting, and advanced integration patterns, visit the project repository or API documentation.
